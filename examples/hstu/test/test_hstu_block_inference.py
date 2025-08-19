@@ -15,6 +15,7 @@
 import sys
 
 import torch
+sys.path.append("../../hstu")
 from configs import (
     InferenceEmbeddingConfig,
     RankingConfig,
@@ -24,7 +25,7 @@ from configs import (
 from dataset.random_inference_dataset import RandomInferenceDataGenerator
 from dataset.utils import FeatureConfig
 
-sys.path.append("./model/")
+sys.path.append("../model/")
 from inference_ranking_gr import InferenceRankingGR
 
 

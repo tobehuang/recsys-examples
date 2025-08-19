@@ -232,22 +232,32 @@ class InferenceRankingGR(torch.nn.Module):
             torch.tensor(kvdata_lengths, dtype=torch.int32),
         )
 
+    # 为当前批次的用户准备键值缓存(KV Cache)，该函数确保在模型推理前
+    #   user_start_pos：包含每个用户起始位置的张量
     def prepare_kv_cache(
         self, batch: Batch, user_ids: torch.Tensor, user_start_pos: torch.Tensor
-    ) -> KVCacheMetadata:
+    ) -> KVCacheMetadata: # 返回值 : 包含准备好的KV缓存元数据的 KVCacheMetadata 对象
         batch_size = user_ids.shape[0]
+
+        # 计算每个用户的新历史记录长度，通过总特征长度减去候选集数量
+        # 因为只缓存用户侧的kv data，所以后选集的数量要减去
         new_history_lengths = (
             torch.sum(batch.features.lengths().view(-1, batch_size), 0).view(-1)
             - batch.num_candidates
         )
+
+        # 从GPU KV缓存管理器获取每个用户已缓存数据的起始位置和长度
         (
             cached_start_pos,
             cached_lengths,
         ) = self._gpu_kv_cache_manager.get_batch_kvdata_info(user_ids)
 
+        # 为新数据分配GPU缓存空间
         self._gpu_kv_cache_manager.allocate(
             user_ids, user_start_pos, new_history_lengths
         )
+
+        # 获取缓存元数据并添加追加元数据信息
         kv_cache_metadata = self._gpu_kv_cache_manager.get_cache_metadata(user_ids)
         append_metadata = self._gpu_kv_cache_manager.get_append_metadata(
             new_history_lengths, kv_cache_metadata.total_history_lengths
@@ -262,6 +272,7 @@ class InferenceRankingGR(torch.nn.Module):
                 kv_cache_metadata, _field_name, getattr(append_metadata, _field_name)
             )
 
+        # 从主机KV存储管理器查找需要加载到GPU的数据
         (
             onload_length,
             onload_kv_page_ids,
