@@ -383,18 +383,25 @@ class HSTUGpuKVCacheManager:
         return self.page_size
 
     def get_kvcache_table(self, layer_idx: int) -> torch.Tensor:
+        # 调用self.impl的get_primary_pool方法，获取一个张量，具体的实现在tensorrt_llm中
         result = self.impl.get_primary_pool()
+
+        # 进行视图变化，将page优先，改成layer优先
         # change from page-major to layer-major
         result = result.view(
             result.shape[1], result.shape[0], result.shape[2], result.shape[3]
         )
+
+        # 通过层索引提取具体的空间，空间从4维变成3维度
         result = result[layer_idx, ...]
+
+        # 重塑（reshape）为新的形状，将3维重塑为五维张量
         return result.reshape(
-            result.shape[0],
-            2,
-            self.page_size,
-            self.num_heads_per_layer[layer_idx],
-            self.head_dim,
+            result.shape[0], # page数
+            2, # （key和value）
+            self.page_size, # （每个页面的大小，比如每个页面包含多少个token）
+            self.num_heads_per_layer[layer_idx], # self.num_heads_per_layer[layer_idx]（当前层的注意力头数）
+            self.head_dim, # self.head_dim（每个注意力头的维度）
         ).to(torch.bfloat16)
 
     def get_onload_buffers(self, layer_idx: int) -> torch.Tensor:

@@ -31,6 +31,9 @@ import math
 from collections import defaultdict
 from typing import Dict, Iterator, List, Optional, Tuple
 
+import sys
+sys.path.append("../..")
+
 import numpy as np
 import pandas as pd
 import torch

@@ -15,13 +15,15 @@
 import sys
 from typing import Optional
 
-sys.path.append("../commons/utils")
+sys.path.append("../../commons/utils")
+sys.path.append("../../../corelib/hstu")
 import pytest
 import torch
 import torch.nn.functional as F
 from einops import rearrange
 from hstu_assert_close import assert_hstu_close
 from hstu_attn import hstu_attn_varlen_func
+
 
 
 def pad_input(unpadded_input, cu_seqlen, batch, seqlen):
@@ -251,6 +253,9 @@ def get_offsets_from_lengths(lengths):
     return offsets
 
 
+# 该函数一个测试辅助函数，用于为Paged KV缓存注意力机制生成随机的测试数据。该函数主要生成两部分内容：
+# 1.随机的序列长度数组
+# 2.对应的键值对(KV)缓存数据
 def generate_kvdata_testcase(
     max_seq_len: int, batch_size: int, num_heads: int, head_dim: int
 ):

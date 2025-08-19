@@ -182,15 +182,15 @@ class PagedHSTUInferLayer(torch.nn.Module):
         kv_cache_table = kv_cache_metadata.kv_cache_table[self.layer_idx]
         (paged_k_cache, paged_v_cache) = kv_cache_table.unbind(dim=1)
         paged_kvcache_ops.append_kvcache(
-            key,
-            value,
+            key, # 需要追加的key向量
+            value, # 需要追加的value向量
             kv_cache_metadata.batch_indices,
             kv_cache_metadata.position,
             jd.num_candidates_offsets,
             kv_cache_metadata.new_history_nnz_cuda,
             num_tokens,  # kv_cache_metadata.new_history_nnz
-            paged_k_cache,
-            paged_v_cache,
+            paged_k_cache, # 保存key向量的空间
+            paged_v_cache,  # 保存value向量的空间
             kv_cache_metadata.kv_indices,
             kv_cache_metadata.kv_indptr,
             kv_cache_metadata.kv_last_page_len,

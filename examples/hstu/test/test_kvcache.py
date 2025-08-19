@@ -15,6 +15,7 @@
 import sys
 
 import torch
+sys.path.append("../../hstu")
 from configs import (
     InferenceEmbeddingConfig,
     RankingConfig,

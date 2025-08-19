@@ -59,28 +59,29 @@ cudaError_t GatherPagedKVCache(DType* gather_kv,
                                uint32_t nnz,
                                cudaStream_t stream);
 
-void append_paged_kv_cache(at::Tensor append_key, at::Tensor append_value, at::Tensor batch_indices,
+void append_paged_kv_cache(at::Tensor append_key, at::Tensor append_value, // 需要追加的k&v数据
+                           at::Tensor batch_indices,
                            at::Tensor positions, at::Tensor seqlen_offsets, 
                            at::Tensor nnz_cuda, unsigned int nnz,
-                           at::Tensor paged_k_cache, at::Tensor paged_v_cache,
+                           at::Tensor paged_k_cache, at::Tensor paged_v_cache, // 保存k&v的空间
                            at::Tensor kv_indices, at::Tensor kv_indptr, at::Tensor kv_last_page_len,
                            int64_t kv_layout) {
   // unsigned int batch_size = kv_last_page_len.size(0);
   auto device = append_key.device();
 
   unsigned int num_heads, page_size, head_dim;
-  head_dim = paged_k_cache.size(3);
-  if (kv_layout == 1) {
+  head_dim = paged_k_cache.size(3); // 表示emb的维度
+  if (kv_layout == 1) { 
     num_heads = paged_k_cache.size(1);
     page_size = paged_k_cache.size(2);
-  } else {
-    page_size = paged_k_cache.size(1);
+  } else { // NHD layout，使用的是这种布局
+    page_size = paged_k_cache.size(1); 
     num_heads = paged_k_cache.size(2);
   }
 
-  auto stride_page = paged_k_cache.stride(0);
-  auto stride_n = (kv_layout == 1) ? head_dim : num_heads * head_dim;
-  auto stride_h = (kv_layout == 1) ? page_size * head_dim : head_dim;
+  auto stride_page = paged_k_cache.stride(0); // 在k_data/v_data中，page之间的跨度（以元素为单位）
+  auto stride_n = (kv_layout == 1) ? head_dim : num_heads * head_dim; // 在page内，相邻token之间的跨度
+  auto stride_h = (kv_layout == 1) ? page_size * head_dim : head_dim; // 在page内，相邻头之间的跨度（同一个token在的不同头的数据间隔）
 
   // get kv_cache_strides
   auto k_strides = paged_k_cache.strides();

@@ -232,10 +232,10 @@ def get_kvcache_metadata_buffer(
 
     default_num_pages_per_seq = 4
     paged_indices_buffer = torch.randint(
-        kvcache_config.blocks_in_primary_pool,
-        (kvcache_config.max_batch_size * max_num_pages_per_seq,),
+        kvcache_config.blocks_in_primary_pool, # blocks_in_primary_pool表示缓存中的总page数，随机数将在此范围内生成 [0, blocks_in_primary_pool)
+        (kvcache_config.max_batch_size * max_num_pages_per_seq,), # 创建一个一维张量（最大批次大小 × 每个序列的最大page数）
         dtype=torch.int32,
-        device=device,
+        device=device, # 指定张量创建在 CUDA 设备上
     )
     page_indptr_buffer = (
         torch.arange(
