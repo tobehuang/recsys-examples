@@ -24,7 +24,7 @@ from configs import (
 )
 from dataset.utils import Batch, FeatureConfig
 
-sys.path.append("./model/")
+sys.path.append("../model/")
 from inference_ranking_gr import InferenceRankingGR
 from torchrec import KeyedJaggedTensor
 

@@ -15,9 +15,9 @@
 import math
 from typing import Tuple
 
-import flashinfer
-import paged_kvcache_ops
-import tensorrt_llm
+import flashinfer # 提供高效的页面索引计算
+import paged_kvcache_ops # 页面化 KV 缓存操作
+import tensorrt_llm # 底层 KV 缓存管理实现
 import torch
 from configs import InferenceHSTUConfig, KVCacheConfig, KVCacheMetadata
 
@@ -128,6 +128,7 @@ class HSTUGpuKVCacheManager:
             for i in range(self.num_layers)
         ]
 
+    # 为新用户分配缓存空间，考虑了驱逐策略
     def allocate(
         self,
         user_ids: torch.Tensor,
@@ -144,10 +145,12 @@ class HSTUGpuKVCacheManager:
                 user_id, start_pos, new_history_length, 1, None
             )
 
+    # 从缓存中移除指定用户的数据
     def evict(self, user_ids: torch.Tensor):
         for idx in range(len(user_ids)):
             self.impl.remove_sequence(user_ids[idx].item(), None)
 
+    # 获取单个用户的缓存信息(起始位置和长度)
     def get_user_kvdata_info(self, user_id: int) -> Tuple[int, int]:
         cached_start_pos = self.impl.get_cached_start_position(
             user_id
@@ -155,6 +158,7 @@ class HSTUGpuKVCacheManager:
         cached_length = self.impl.get_num_tokens_cached(user_id)
         return (cached_start_pos, cached_length)
 
+    # 获取批量用户的缓存信息(起始位置和长度)
     def get_batch_kvdata_info(
         self, user_ids: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -175,6 +179,8 @@ class HSTUGpuKVCacheManager:
         )
         return (cached_start_pos, cached_lengths)
 
+    # 缓存卸载 异步将 GPU 缓存数据卸载到主机内存
+    # 支持分块卸载以优化内存使用；使用 CUDA 流实现并行处理
     def offload(
         self,
         user_ids: torch.Tensor,
@@ -287,6 +293,7 @@ class HSTUGpuKVCacheManager:
             offload_page_indptr,
         )
 
+    # 缓存加载，将主机内存中的缓存数据加载回 GPU，使用异步操作提高效率
     def onload(self, host_kv_data: torch.Tensor, onload_length: int, kv_cache_metadata):
         if onload_length == 0:
             return
@@ -302,6 +309,7 @@ class HSTUGpuKVCacheManager:
                     self._onload_stream
                 )
 
+    # 元数据管理，生成和管理缓存元数据，包括页面索引、偏移量等
     def get_cache_metadata(self, user_ids: torch.Tensor) -> "KVCacheMetadata":
         batch_size = len(user_ids)
 
@@ -382,8 +390,10 @@ class HSTUGpuKVCacheManager:
     def get_page_size(self) -> int:
         return self.page_size
 
+    # 缓存访问，提供对底层缓存表的访问
     def get_kvcache_table(self, layer_idx: int) -> torch.Tensor:
-        # 调用self.impl的get_primary_pool方法，获取一个张量，具体的实现在tensorrt_llm中
+        # self.impl = KVCacheManagerImpl，它的实现在tensorrt_llm中
+        # get_primary_pool获取一个张量
         result = self.impl.get_primary_pool()
 
         # 进行视图变化，将page优先，改成layer优先
